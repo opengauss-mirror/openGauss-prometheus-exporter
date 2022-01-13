@@ -187,9 +187,9 @@ func TestQueryInstance(t *testing.T) {
 			},
 		}
 		ver1 := semver.Version{
-			Major: 1,
-			Minor: 1,
-			Patch: 0,
+			Major: 500,
+			Minor: 001,
+			Patch: 20,
 		}
 		queryInstance.Check()
 		q := queryInstance.GetQuerySQL(ver1, true)

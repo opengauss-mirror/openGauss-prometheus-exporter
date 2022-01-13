@@ -6,16 +6,17 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"gitee.com/opengauss/openGauss-connector-go-pq"
-	"github.com/blang/semver"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
-	"github.com/sirupsen/logrus"
 	"math"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	pq "gitee.com/opengauss/openGauss-connector-go-pq"
+	"github.com/blang/semver"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -110,7 +111,7 @@ type Server struct {
 	queryScrapeDuration    map[string]float64 // internal query metrics: time spend on executing
 }
 
-// Close disconnects from OpenGauss.
+// Close disconnects from openGauss.
 func (s *Server) Close() error {
 	if s.db == nil {
 		return nil
@@ -144,13 +145,8 @@ func (s *Server) Scrape(ch chan<- prometheus.Metric) error {
 
 	s.lock.RLock()
 	defer s.lock.RUnlock()
-	if !s.notCollInternalMetrics {
-		_ = s.setupServerInternalMetrics()
-	}
-	s.scrapeBegin = time.Now()
 
 	var err error
-
 	if !s.disableSettingsMetrics && !s.notCollInternalMetrics {
 		if err = s.querySettings(ch); err != nil {
 			err = fmt.Errorf("error retrieving settings: %s", err)
@@ -160,15 +156,6 @@ func (s *Server) Scrape(ch chan<- prometheus.Metric) error {
 	errMap := s.queryMetrics(ch)
 	if len(errMap) > 0 {
 		err = fmt.Errorf("queryMetrics returned %d errors", len(errMap))
-	}
-	if !s.notCollInternalMetrics {
-		s.scrapeDone = time.Now()
-		// 最后采集时间
-		s.lastScrapeTime.Set(float64(s.scrapeDone.Unix()))
-		// 采集耗时
-		s.scrapeDuration.Set(s.scrapeDone.Sub(s.scrapeBegin).Seconds())
-
-		s.collectorServerInternalMetrics(ch)
 	}
 
 	return err
@@ -220,7 +207,7 @@ func (s *Server) collectorServerInternalMetrics(ch chan<- prometheus.Metric) {
 	}
 
 	versionDesc := prometheus.NewDesc(fmt.Sprintf("%s_%s", s.namespace, "version"),
-		"Version string as reported by OpenGauss", []string{"version", "short_version"}, s.labels)
+		"Version string as reported by openGauss", []string{"version", "short_version"}, s.labels)
 	version := prometheus.MustNewConstMetric(versionDesc,
 		prometheus.UntypedValue, 1, s.lastMapVersion.String(), s.lastMapVersion.String())
 	s.scrapeTotalCount.Add(float64(s.ScrapeTotalCount))
@@ -355,14 +342,14 @@ func NewServer(dsn string, opts ...ServerOpt) (*Server, error) {
 	return s, nil
 }
 
-// Servers contains a collection of servers to OpenGauss.
+// Servers contains a collection of servers to openGauss.
 type Servers struct {
 	m       sync.Mutex
 	servers map[string]*Server
 	opts    []ServerOpt
 }
 
-// NewServers creates a collection of servers to OpenGauss.
+// NewServers creates a collection of servers to openGauss.
 func NewServers(opts ...ServerOpt) *Servers {
 	return &Servers{
 		servers: make(map[string]*Server),
@@ -381,14 +368,14 @@ func (s *Servers) GetServer(dsn string) (*Server, error) {
 	var server *Server
 	for {
 		if errCount++; errCount > retries {
-			return nil, err
+			return server, err
 		}
 		server, ok = s.servers[dsn]
 		if !ok {
 			server, err = NewServer(dsn, s.opts...)
 			if err != nil {
 				log.Errorf("new server %s err %s", server.fingerprint, err)
-				time.Sleep(time.Duration(errCount) * time.Second)
+				time.Sleep(1 * time.Second)
 				continue
 			}
 			s.servers[dsn] = server
@@ -396,7 +383,7 @@ func (s *Servers) GetServer(dsn string) (*Server, error) {
 		if !server.UP {
 			if err = server.ConnectDatabase(); err != nil {
 				log.Errorf("new server %s err %s", server.fingerprint, err)
-				time.Sleep(time.Duration(errCount) * time.Second)
+				time.Sleep(1 * time.Second)
 				continue
 			}
 		}
@@ -411,14 +398,14 @@ func (s *Servers) GetServer(dsn string) (*Server, error) {
 	isPrimary, err := server.IsPrimary()
 	if err != nil {
 		// log.Errorf("Error querying IsPrimary (%s): %v", ShadowDSN(dsn), err)
-		return nil, err
+		return server, err
 	}
 	// If autoDiscoverDatabases is true, set first dsn as primary database (Default: false)
 	server.primary = isPrimary
 	// server.primary = false
 
 	if err = server.getVersion(); err != nil {
-		return nil, err
+		return server, err
 	}
 
 	return server, nil

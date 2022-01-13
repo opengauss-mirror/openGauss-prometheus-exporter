@@ -1,39 +1,163 @@
-# openGauss-prometheus-exporter
+# openGauss Server Exporter
 
-#### 介绍
-{**以下是 Gitee 平台说明，您可以替换此简介**
-Gitee 是 OSCHINA 推出的基于 Git 的代码托管平台（同时支持 SVN）。专为开发者提供稳定、高效、安全的云端软件开发协作平台
-无论是个人、团队、或是企业，都能够用 Gitee 实现代码托管、项目管理、协作开发。企业项目请看 [https://gitee.com/enterprises](https://gitee.com/enterprises)}
+Prometheus exporter for openGauss server metrics.
 
-#### 软件架构
-软件架构说明
+## Quick Start
 
+This package is available for Docker:
 
-#### 安装教程
+```bash
+# Start an example database
+docker run --net=host -it --rm -e GS_PASSWORD=mtkOP@128 enmotech/opengauss
+# Connect to it
+docker run --net=host -e DATA_SOURCE_NAME="postgresql://postgres:password@localhost:5432/postgres?sslmode=disable" mogdb/opengauss_exporter
+```
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+## Building and running
 
-#### 使用说明
+### gitee
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+The default make file behavior is to build the binary:
 
-#### 参与贡献
+```bash
+go clone https://gitee.com/opengauss/openGauss-prometheus-exporter.git
+cd openGauss-prometheus-exporter
+make build
+export DATA_SOURCE_NAME="postgresql://login:password@hostname:port/dbname"
+./bin/opengauss_exporter <flags>
+```
 
-1.  Fork 本仓库
-2.  新建 Feat_xxx 分支
-3.  提交代码
-4.  新建 Pull Request
+To build the docker, run `make docker`.
 
+### Flags
 
-#### 特技
+- `help`
+  Show context-sensitive help (also try --help-long and --help-man).
 
-1.  使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
-2.  Gitee 官方博客 [blog.gitee.com](https://blog.gitee.com)
-3.  你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解 Gitee 上的优秀开源项目
-4.  [GVP](https://gitee.com/gvp) 全称是 Gitee 最有价值开源项目，是综合评定出的优秀开源项目
-5.  Gitee 官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6.  Gitee 封面人物是一档用来展示 Gitee 会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+- `web.listen-address`
+  Address to listen on for web interface and telemetry. Default is `:9187`.
+
+- `web.telemetry-path`
+  Path under which to expose metrics. Default is `/metrics`.
+
+- `disable-settings-metrics`
+  Use the flag if you don't want to scrape `pg_settings`.
+
+- `auto-discover-databases`
+  Whether to discover the databases on a server dynamically.
+
+- `config`
+  Path to a YAML file containing queries to run. Check out [`og_exporter.yaml`](og_exporter_default.yaml)
+  for examples of the format.
+
+- `--dry-run`
+  Do not run - print the internal representation of the metric maps. Useful when debugging a custom
+  queries file.
+
+- `constantLabels`
+  Labels to set in all metrics. A list of `label=value` pairs, separated by commas.
+
+- `version`
+  Show application version.
+
+- `exclude-databases`
+  A list of databases to remove when autoDiscoverDatabases is enabled.
+
+- `log.level`
+  Set logging level: one of `debug`, `info`, `warn`, `error`, `fatal`
+
+- `log.format`
+  Set the log output target and format. e.g. `logger:syslog?appname=bob&local=7` or `logger:stdout?json=true`
+  Defaults to `logger:stderr`.
+
+### Environment Variables
+
+The following environment variables configure the exporter:
+
+- `DATA_SOURCE_NAME` `PG_EXPORTER_URL`
+  the default legacy format. Accepts URI form and key=value form arguments. The
+  URI may contain the username and password to connect with.
+
+- `OG_EXPORTER_WEB_LISTEN_ADDRESS`
+  Address to listen on for web interface and telemetry. Default is `:9187`.
+
+- `OG_EXPORTER_WEB_TELEMETRY_PATH`
+  Path under which to expose metrics. Default is `/metrics`.
+
+- `OG_EXPORTER_DISABLE_SETTINGS_METRICS`
+  Use the flag if you don't want to scrape `pg_settings`. Value can be `true` or `false`. Default is `false`.
+
+- `OG_EXPORTER_AUTO_DISCOVER_DATABASES`
+  Whether to discover the databases on a server dynamically. Value can be `true` or `false`. Default is `false`.
+
+- `OG_EXPORTER_CONSTANT_LABELS`
+  Labels to set in all metrics. A list of `label=value` pairs, separated by commas.
+
+- `OG_EXPORTER_EXCLUDE_DATABASES`
+  A comma-separated list of databases to remove when autoDiscoverDatabases is enabled. Default is empty string.
+
+Settings set by environment variables starting with `OG_` will be overwritten by the corresponding CLI flag if given.
+
+### Setting the openGauss server's data source name
+
+The openGauss server's [data source name](http://en.wikipedia.org/wiki/Data_source_name)
+must be set via the `DATA_SOURCE_NAME` environment variable.
+
+For running it locally on a default Debian/Ubuntu install, this will work (transpose to init script as appropriate):
+
+```bash
+DATA_SOURCE_NAME="user=postgres host=/var/run/postgresql/ sslmode=disable" opengauss_exporter
+```
+
+Also, you can set a list of sources to scrape different instances from the one exporter setup. Just define a comma separated string.
+
+```bash
+DATA_SOURCE_NAME="port=5432,port=6432" opengauss_exporter
+```
+
+See the [github.com/lib/pq](http://github.com/lib/pq) module for other ways to format the connection string.
+
+### Adding new metrics via a config file
+
+The --config command-line argument specifies a YAML file containing additional queries to run.
+Some examples are provided in [og_exporter.yaml](og_exporter_default.yaml).
+
+### Automatically discover databases
+
+To scrape metrics from all databases on a database server, the database DSN's can be dynamically discovered via the
+`--auto-discover-databases` flag. When true, `SELECT datname FROM pg_database WHERE datallowconn = true AND datistemplate = false and datname != current_database()` is run for all configured DSN's. From the
+result a new set of DSN's is created for which the metrics are scraped.
+
+In addition, the option `--exclude-databases` adds the possibily to filter the result from the auto discovery to discard databases you do not need.
+
+### run test
+
+```shell
+make build
+cd test;sh test.sh ../bin/opengauss_exporter <config_file>
+```
+
+### openGauss
+
+### Monitor user
+
+```bash
+CREATE USER dbuser_monitor with login monadmin PASSWORD 'Mon@1234';
+grant usage on schema dbe_perf to dbuser_monitor;
+grant select on pg_stat_replication to dbuser_monitor;
+
+```
+
+### primary and standby
+
+```bash
+docker network create opengauss_network --subnet=172.11.0.0/24
+docker run --network opengauss_network --ip 172.11.0.101 \
+  --privileged=true --name opengauss_primary  -h opengauss_primary  -p 1111:5432 -d \
+  -e GS_PORT=5432 -e OG_SUBNET=172.11.0.0/24 -e GS_PASSWORD=Gauss@123 -e NODE_NAME=opengauss_primary \
+  -e 'REPL_CONN_INFO=replconninfo1 = '\''localhost=172.11.0.101 localport=5434 localservice=5432 remotehost=172.11.0.102 remoteport=5434 remoteservice=5432'\''\n' enmotech/opengauss:1.1.0 -M primary
+docker run --network opengauss_network --ip 172.11.0.102 \
+  --privileged=true --name opengauss_standby1 -h opengauss_standby1 -p 1112:5432 -d \
+  -e GS_PORT=5432 -e OG_SUBNET=172.11.0.0/24 -e GS_PASSWORD=Gauss@123 -e NODE_NAME=opengauss_standby1 \
+  -e 'REPL_CONN_INFO=replconninfo1 = '\''localhost=172.11.0.102 localport=5434 localservice=5432 remotehost=172.11.0.101 remoteport=5434 remoteservice=5432'\''\n' enmotech/opengauss:1.1.0 -M standby
+```

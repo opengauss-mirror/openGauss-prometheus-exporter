@@ -4,11 +4,12 @@ package exporter
 
 import (
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
 	"math"
 	"strconv"
 	"strings"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 )
 
 // QueryInstance the pg_settings view containing runtime variables
@@ -41,7 +42,6 @@ func (s *Server) querySettings(ch chan<- prometheus.Metric) error {
 		if metric := pgSetting.metric(s.namespace, s.labels); metric != nil {
 			ch <- metric
 		}
-
 	}
 	if err = rows.Err(); err != nil {
 		return err
@@ -49,7 +49,7 @@ func (s *Server) querySettings(ch chan<- prometheus.Metric) error {
 	return nil
 }
 
-// pgSetting is represents a OpenGauss runtime variable as returned by the
+// pgSetting is represents a openGauss runtime variable as returned by the
 // pg_settings view.
 type pgSetting struct {
 	name, setting, unit, shortDesc, varType string

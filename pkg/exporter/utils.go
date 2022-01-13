@@ -95,10 +95,14 @@ func parseVersionSem(versionString string) (semver.Version, error) {
 func parseVersion(versionString string) string {
 	versionString = strings.TrimSpace(versionString)
 	// var versionRegex = regexp.MustCompile(`^(\(\w+|\w+)\s+((\d+)(\.\d+)?(\.\d+)?)`)
-	var versionRegex = regexp.MustCompile(`(?i)(openGauss|MogDB)\s+((\d+)(\.\d+)?(\.\d+))`)
+	var versionRegex = regexp.MustCompile(`(?i)(openGauss|MogDB|GaussDB Kernel)\s+((\d+)(\.\d+)?(\.\d+)|\w+)`)
 	subMatches := versionRegex.FindStringSubmatch(versionString)
-	if len(subMatches) > 3 {
-		return subMatches[2]
+	if len(subMatches) < 3 {
+		return ""
 	}
-	return ""
+	if subMatches[1] == "GaussDB Kernel" {
+		r := regexp.MustCompile(`V(\d+)R(\d+)C(\d+)`).ReplaceAllString(subMatches[2], "${1}.${2}.${3}")
+		return r
+	}
+	return subMatches[2]
 }

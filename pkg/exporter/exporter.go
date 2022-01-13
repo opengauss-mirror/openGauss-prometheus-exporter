@@ -214,6 +214,8 @@ func (e *Exporter) collectInternalMetrics(ch chan<- prometheus.Metric) {
 	ch <- e.scrapeDuration
 
 }
+
+// discoverDatabaseDSNs 通过指定dsn发现全部数据库
 func (e *Exporter) discoverDatabaseDSNs() []string {
 	result := []string{}
 	for _, dsn := range e.dsn {
@@ -242,15 +244,32 @@ func (e *Exporter) discoverDatabaseDSNs() []string {
 			result = append(result, genDSNString(parsedDSN))
 		}
 	}
+	// 自动发现数据库失败,返回原来dsn
+	if len(result) == 0 {
+		return e.dsn
+	}
 	return result
 }
 func (e *Exporter) scrapeDSN(ch chan<- prometheus.Metric, dsn string) error {
-	server, err := e.servers.GetServer(dsn)
 
+	server, err := e.servers.GetServer(dsn)
+	defer func() {
+		if !server.notCollInternalMetrics {
+			_ = server.setupServerInternalMetrics()
+
+			server.scrapeDone = time.Now()
+			// 最后采集时间
+			server.lastScrapeTime.Set(float64(server.scrapeDone.Unix()))
+			// 采集耗时
+			server.scrapeDuration.Set(server.scrapeDone.Sub(server.scrapeBegin).Seconds())
+
+			server.collectorServerInternalMetrics(ch)
+		}
+	}()
+	server.scrapeBegin = time.Now()
 	if err != nil {
 		return &ErrorConnectToServer{fmt.Sprintf("Error opening connection to database (%s): %s", ShadowDSN(dsn), err.Error())}
 	}
-
 	_, ok := e.collStatus[server.fingerprint]
 	// 如果同一个ip+端口采集过一次,说明公共指标已采集,不需要在采集了
 	if ok {
