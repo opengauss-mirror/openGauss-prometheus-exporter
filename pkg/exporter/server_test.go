@@ -5,13 +5,14 @@ package exporter
 import (
 	"database/sql"
 	"fmt"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/blang/semver"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
-	"sync"
-	"testing"
-	"time"
 )
 
 func Test_parseFingerprint(t *testing.T) {
@@ -745,7 +746,7 @@ postgres,AccessExclusiveLock,0`))
 			ch = make(chan prometheus.Metric, 100)
 			q  = &QueryInstance{
 				Name: "pg_database",
-				Desc: "OpenGauss Database size",
+				Desc: "openGauss Database size",
 				Queries: []*Query{
 					{
 						SQL:     `SELECT datname,size_bytes from dual`,
@@ -775,7 +776,7 @@ postgres,AccessExclusiveLock,0`))
 			ch = make(chan prometheus.Metric, 100)
 			q  = &QueryInstance{
 				Name: "pg_database",
-				Desc: "OpenGauss Database size",
+				Desc: "openGauss Database size",
 				Queries: []*Query{
 					{
 						SQL:     `SELECT datname,size_bytes from dual`,
@@ -825,7 +826,7 @@ postgres,AccessExclusiveLock,0`))
 			ch = make(chan prometheus.Metric, 100)
 			q  = &QueryInstance{
 				Name: "pg_database",
-				Desc: "OpenGauss Database size",
+				Desc: "openGauss Database size",
 				Queries: []*Query{
 					{
 						SQL:     `SELECT datname,size_bytes from dual`,
@@ -849,7 +850,7 @@ postgres,AccessExclusiveLock,0`))
 			ch          = make(chan prometheus.Metric, 100)
 			pg_database = &QueryInstance{
 				Name: "pg_database",
-				Desc: "OpenGauss Database size",
+				Desc: "openGauss Database size",
 				Queries: []*Query{
 					{
 						SQL:     `SELECT datname,size_bytes from dual`,

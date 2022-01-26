@@ -285,10 +285,16 @@ func Test_parseVersion(t *testing.T) {
 			args: args{versionString: "PostgreSQL 9.2.4 (openGauss 2.0.0 build 78689da9) compiled at 2021-03-31 21:04:03 commit 0 last mr   on x86_64-unknown-linux-gnu, compiled by g++ (GCC) 7.3.0, 64-bit"},
 			want: "2.0.0",
 		},
+		{
+			name: "GaussDB Kernel V500R001C20",
+			args: args{versionString: "PostgreSQL 9.2.4 (GaussDB Kernel V500R001C20 build 9eff8f60) compiled at 2021-09-24 10:10:25 commit 0 last mr   on x86_64-unknown-linux-gnu, compiled by g++ (GCC) 7.3.0, 64-bit"},
+			want: "500.001.20",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := parseVersion(tt.args.versionString); got != tt.want {
+			got := parseVersion(tt.args.versionString)
+			if got != tt.want {
 				t.Errorf("parseVersion() = %v, want %v", got, tt.want)
 			}
 		})

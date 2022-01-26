@@ -9,7 +9,7 @@ package exporter
 var (
 	pgLock = &QueryInstance{
 		Name: "pg_lock",
-		Desc: "OpenGauss lock distribution by mode",
+		Desc: "openGauss lock distribution by mode",
 		Queries: []*Query{
 			{
 				Version: ">=0.0.0",
@@ -99,7 +99,7 @@ FROM pg_stat_replication`,
 	}
 	pgStatActivity = &QueryInstance{
 		Name: "pg_stat_activity",
-		Desc: "OpenGauss backend activity group by state",
+		Desc: "openGauss backend activity group by state",
 		Queries: []*Query{
 			{
 				SQL: `SELECT datname,
@@ -136,7 +136,7 @@ FROM (SELECT d.oid AS database, d.datname, a.state
 	}
 	pgDatabase = &QueryInstance{
 		Name: "pg_database",
-		Desc: "OpenGauss Database size",
+		Desc: "openGauss Database size",
 		Queries: []*Query{
 			{
 				SQL:     `SELECT pg_database.datname, pg_database_size(pg_database.datname) as size_bytes FROM pg_database where datname NOT IN ('template0','template1')`,
@@ -151,7 +151,7 @@ FROM (SELECT d.oid AS database, d.datname, a.state
 	}
 	pgStatBgWriter = &QueryInstance{
 		Name: "pg_stat_bgwriter",
-		Desc: "OpenGauss background writer metrics",
+		Desc: "openGauss background writer metrics",
 		Queries: []*Query{
 			{
 				SQL: `SELECT checkpoints_timed,
@@ -186,7 +186,7 @@ FROM pg_stat_bgwriter`,
 	}
 	pgStatDatabase = &QueryInstance{
 		Name: "pg_stat_database",
-		Desc: "OpenGauss database statistics",
+		Desc: "openGauss database statistics",
 		Queries: []*Query{
 			{
 				SQL:     "select * from pg_stat_database where datname NOT IN ('template0','template1')",
@@ -200,7 +200,7 @@ FROM pg_stat_bgwriter`,
 			{Name: "xact_commit", Usage: COUNTER, Desc: "Number of transactions in this database that have been committed"},
 			{Name: "xact_rollback", Usage: COUNTER, Desc: "Number of transactions in this database that have been rolled back"},
 			{Name: "blks_read", Usage: COUNTER, Desc: "Number of disk blocks read in this database"},
-			{Name: "blks_hit", Usage: COUNTER, Desc: "Number of times disk blocks were found already in the buffer cache, so that a read was not necessary (this only includes hits in the OpenGauss buffer cache, not the operating system's file system cache)"},
+			{Name: "blks_hit", Usage: COUNTER, Desc: "Number of times disk blocks were found already in the buffer cache, so that a read was not necessary (this only includes hits in the openGauss buffer cache, not the operating system's file system cache)"},
 			{Name: "tup_returned", Usage: COUNTER, Desc: "Number of rows returned by queries in this database"},
 			{Name: "tup_fetched", Usage: COUNTER, Desc: "Number of rows fetched by queries in this database"},
 			{Name: "tup_inserted", Usage: COUNTER, Desc: "Number of rows inserted by queries in this database"},
@@ -218,7 +218,7 @@ FROM pg_stat_bgwriter`,
 	}
 	pgStatDatabaseConflicts = &QueryInstance{
 		Name: "pg_stat_database_conflicts",
-		Desc: "OpenGauss database statistics conflicts",
+		Desc: "openGauss database statistics conflicts",
 		Queries: []*Query{
 			{
 				SQL:     "select * from pg_stat_database_conflicts where datname NOT IN ('template0','template1')",
