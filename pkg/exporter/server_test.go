@@ -29,14 +29,14 @@ func Test_parseFingerprint(t *testing.T) {
 			args: args{
 				url: "postgres://userDsn:passwordDsn@localhost:55432/?sslmode=disabled",
 			},
-			want: "'localhost':'55432'",
+			want: "localhost:55432",
 		},
 		{
 			name: "localhost:55432",
 			args: args{
 				url: "postgres://userDsn:passwordDsn%3D@localhost:55432/?sslmode=disabled",
 			},
-			want: "'localhost':'55432'",
+			want: "localhost:55432",
 		},
 		{
 			name: "127.0.0.1:5432",
@@ -337,6 +337,7 @@ omm`))
 			t.Error(err)
 		}
 		s.db = db
+		s.UP = true
 		mock.ExpectQuery("SELECT pg_is_in_recovery()").WillReturnRows(
 			sqlmock.NewRows([]string{"pg_is_in_recovery"}).AddRow(false))
 		r, err := s.IsPrimary()
@@ -349,6 +350,7 @@ omm`))
 			t.Error(err)
 		}
 		s.db = db
+		s.UP = true
 		mock.ExpectQuery("SELECT").WillReturnRows(
 			sqlmock.NewRows([]string{"version"}).AddRow("PostgreSQL 9.2.4 (openGauss 2.0.0 build 78689da9) compiled at 2021-03-31 21:04:03 commit 0 last mr   on x86_64-unknown-linux-gnu, compiled by g++ (GCC) 7.3.0, 64-bit"))
 		err := s.getVersion()
