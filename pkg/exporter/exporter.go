@@ -167,7 +167,7 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 
 	dsnList := e.dsn
 	if e.autoDiscovery {
-		dsnList = e.discoverDatabaseDSNs()
+		dsnList = e.discoverDatabaseDSNs(ch)
 	}
 
 	var errorsCount int
@@ -175,7 +175,9 @@ func (e *Exporter) scrape(ch chan<- prometheus.Metric) {
 	// 重置采集状态
 	e.collStatus = map[string]bool{}
 	for _, dsn := range dsnList {
-		// log.Debugf(dsn)
+		if dsn == "" {
+			continue
+		}
 		if err := e.scrapeDSN(ch, dsn); err != nil {
 			errorsCount++
 
@@ -216,9 +218,12 @@ func (e *Exporter) collectInternalMetrics(ch chan<- prometheus.Metric) {
 }
 
 // discoverDatabaseDSNs 通过指定dsn发现全部数据库
-func (e *Exporter) discoverDatabaseDSNs() []string {
+func (e *Exporter) discoverDatabaseDSNs(ch chan<- prometheus.Metric) []string {
 	result := []string{}
 	for _, dsn := range e.dsn {
+		if dsn == "" {
+			continue
+		}
 		parsedDSN, err := parseDsn(dsn)
 		if err != nil {
 			log.Errorf("Unable to parse DSN (%s): %v", ShadowDSN(dsn), err)
@@ -226,13 +231,14 @@ func (e *Exporter) discoverDatabaseDSNs() []string {
 		}
 		server, err := e.servers.GetServer(dsn)
 		if err != nil {
-			log.Errorf("Error opening connection to database (%s): %v", ShadowDSN(dsn), err)
+			// server.collectorServerInternalMetrics(ch)
+			log.Errorf("discoverDatabaseDSNs error opening connection to database (%s): %v", ShadowDSN(dsn), err)
 			continue
 		}
 
 		databaseNames, err := server.QueryDatabases()
 		if err != nil {
-			log.Errorf("Error querying databases (%s): %v", ShadowDSN(dsn), err)
+			log.Errorf("discoverDatabaseDSNs error querying databases (%s): %v", ShadowDSN(dsn), err)
 			continue
 		}
 		result = append(result, genDSNString(parsedDSN))
@@ -250,19 +256,12 @@ func (e *Exporter) discoverDatabaseDSNs() []string {
 	}
 	return result
 }
+
 func (e *Exporter) scrapeDSN(ch chan<- prometheus.Metric, dsn string) error {
 
 	server, err := e.servers.GetServer(dsn)
 	defer func() {
 		if !server.notCollInternalMetrics {
-			_ = server.setupServerInternalMetrics()
-
-			server.scrapeDone = time.Now()
-			// 最后采集时间
-			server.lastScrapeTime.Set(float64(server.scrapeDone.Unix()))
-			// 采集耗时
-			server.scrapeDuration.Set(server.scrapeDone.Sub(server.scrapeBegin).Seconds())
-
 			server.collectorServerInternalMetrics(ch)
 		}
 	}()

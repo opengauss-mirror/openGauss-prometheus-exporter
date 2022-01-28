@@ -56,7 +56,10 @@ func (a *Args) RetrieveTargetURL() []string {
 		log.Infof("retrieve target url %s from command line", exporter.ShadowDSN(*a.DbURL))
 		dsn = *a.DbURL
 	} else {
-		if res := os.Getenv("PG_EXPORTER_URL"); res != "" {
+		if res := os.Getenv("OG_EXPORTER_URL"); res != "" {
+			log.Infof("retrieve target url %s from PG_EXPORTER_URL", exporter.ShadowDSN(res))
+			dsn = res
+		} else if res := os.Getenv("PG_EXPORTER_URL"); res != "" {
 			log.Infof("retrieve target url %s from PG_EXPORTER_URL", exporter.ShadowDSN(res))
 			dsn = res
 		} else if res := os.Getenv("DATA_SOURCE_NAME"); res != "" {

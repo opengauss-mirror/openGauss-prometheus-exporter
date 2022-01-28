@@ -69,7 +69,7 @@ func TestParseConfig(t *testing.T) {
 			name: "pg_bgwriter",
 			args: args{
 				content: []byte(`pg_bgwriter:
-  desc: openGauss background writer metrics
+  desc: OpenGauss background writer metrics
   query:
   - name: pg_stat_bgwriter
     sql: |-
