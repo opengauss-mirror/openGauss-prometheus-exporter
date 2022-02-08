@@ -231,7 +231,7 @@ func (e *Exporter) discoverDatabaseDSNs(ch chan<- prometheus.Metric) []string {
 		}
 		server, err := e.servers.GetServer(dsn)
 		if err != nil {
-			// server.collectorServerInternalMetrics(ch)
+			server.collectorServerInternalMetrics(ch)
 			log.Errorf("discoverDatabaseDSNs error opening connection to database (%s): %v", ShadowDSN(dsn), err)
 			continue
 		}
@@ -250,10 +250,10 @@ func (e *Exporter) discoverDatabaseDSNs(ch chan<- prometheus.Metric) []string {
 			result = append(result, genDSNString(parsedDSN))
 		}
 	}
-	// 自动发现数据库失败,返回原来dsn
-	if len(result) == 0 {
-		return e.dsn
-	}
+	// // 自动发现数据库失败,返回原来dsn
+	// if len(result) == 0 {
+	// 	return e.dsn
+	// }
 	return result
 }
 
