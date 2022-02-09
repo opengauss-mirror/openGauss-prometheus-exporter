@@ -6,22 +6,21 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"gitee.com/opengauss/openGauss-connector-go-pq"
+	"github.com/blang/semver"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
+	"github.com/sirupsen/logrus"
 	"math"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-
-	pq "gitee.com/opengauss/openGauss-connector-go-pq"
-	"github.com/blang/semver"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
-	"github.com/sirupsen/logrus"
 )
 
 var (
 	serverLabelName = "server"
-	staticLabelName = "static"
+	// staticLabelName = "static"
 )
 
 // ServerOpt configures a server.
@@ -111,7 +110,7 @@ type Server struct {
 	queryScrapeDuration    map[string]float64 // internal query metrics: time spend on executing
 }
 
-// Close disconnects from openGauss.
+// Close disconnects from OpenGauss.
 func (s *Server) Close() error {
 	if s.db == nil {
 		return nil
@@ -194,6 +193,10 @@ func (s *Server) collectorServerInternalMetrics(ch chan<- prometheus.Metric) {
 	if s.notCollInternalMetrics {
 		return
 	}
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	_ = s.setupServerInternalMetrics()
 	if s.UP {
 		s.up.Set(1)
 		if s.primary {
@@ -205,9 +208,17 @@ func (s *Server) collectorServerInternalMetrics(ch chan<- prometheus.Metric) {
 		s.up.Set(0)
 		s.scrapeErrorCount.Add(1)
 	}
+	if s.scrapeBegin.IsZero() {
+		s.scrapeBegin = time.Now()
+	}
+	s.scrapeDone = time.Now()
+	// 最后采集时间
+	s.lastScrapeTime.Set(float64(s.scrapeDone.Unix()))
+	// 采集耗时
+	s.scrapeDuration.Set(s.scrapeDone.Sub(s.scrapeBegin).Seconds())
 
 	versionDesc := prometheus.NewDesc(fmt.Sprintf("%s_%s", s.namespace, "version"),
-		"Version string as reported by openGauss", []string{"version", "short_version"}, s.labels)
+		"Version string as reported by OpenGauss", []string{"version", "short_version"}, s.labels)
 	version := prometheus.MustNewConstMetric(versionDesc,
 		prometheus.UntypedValue, 1, s.lastMapVersion.String(), s.lastMapVersion.String())
 	s.scrapeTotalCount.Add(float64(s.ScrapeTotalCount))
@@ -307,7 +318,7 @@ func (s *Server) ConnectDatabase() error {
 		return err
 	}
 	s.db.SetConnMaxIdleTime(120 * time.Second)
-	s.db.SetMaxIdleConns(s.parallel)
+	// s.db.SetMaxIdleConns(s.parallel)
 	s.db.SetMaxOpenConns(s.parallel)
 	s.UP = true
 	return nil
@@ -342,14 +353,14 @@ func NewServer(dsn string, opts ...ServerOpt) (*Server, error) {
 	return s, nil
 }
 
-// Servers contains a collection of servers to openGauss.
+// Servers contains a collection of servers to OpenGauss.
 type Servers struct {
 	m       sync.Mutex
 	servers map[string]*Server
 	opts    []ServerOpt
 }
 
-// NewServers creates a collection of servers to openGauss.
+// NewServers creates a collection of servers to OpenGauss.
 func NewServers(opts ...ServerOpt) *Servers {
 	return &Servers{
 		servers: make(map[string]*Server),
@@ -505,19 +516,32 @@ func parseFingerprint(url string) (string, error) {
 		kv[split[0]] = split[1]
 	}
 
-	var fingerprint string
+	var (
+		fingerprint         string
+		fingerprintHostName string
+		fingerprintPort     string
+	)
 
 	if host, ok := kv["host"]; ok {
-		fingerprint += host
+		fingerprintHostName = host
 	} else {
-		fingerprint += "localhost"
+		fingerprintHostName = "localhost"
 	}
-
+	fingerprintHostName = TrimSingleQuotationMarks(fingerprintHostName)
 	if port, ok := kv["port"]; ok {
-		fingerprint += ":" + port
+		fingerprintPort = port
 	} else {
-		fingerprint += ":5432"
+		fingerprintPort = "5432"
 	}
-
+	fingerprintPort = TrimSingleQuotationMarks(fingerprintPort)
+	fingerprint = fmt.Sprintf("%s:%s", fingerprintHostName, fingerprintPort)
 	return fingerprint, nil
+}
+func TrimSingleQuotationMarks(s string) string {
+	return TrimPreAndSuffix(s, "'", "'")
+}
+func TrimPreAndSuffix(s, pre, suf string) string {
+	s = strings.TrimPrefix(s, pre)
+	s = strings.TrimSuffix(s, suf)
+	return s
 }
