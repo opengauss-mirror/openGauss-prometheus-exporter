@@ -3,6 +3,7 @@
 package exporter
 
 import (
+	"fmt"
 	"github.com/blang/semver"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
@@ -199,7 +200,7 @@ func Test_parseCSV(t *testing.T) {
 	}
 }
 
-func Test_parseVersionSem(t *testing.T) {
+func Test_parseVersionSem1(t *testing.T) {
 	type args struct {
 		versionString string
 	}
@@ -207,8 +208,32 @@ func Test_parseVersionSem(t *testing.T) {
 		name    string
 		args    args
 		want    semver.Version
-		wantErr bool
+		wantErr assert.ErrorAssertionFunc
 	}{
+		{
+			name: "GaussDB Kernel V500R001C20",
+			args: args{versionString: "PostgreSQL 9.2.4 (GaussDB Kernel V500R001C20 build 9eff8f60) compiled at 2021-09-24 10:10:25 commit 0 last mr   on x86_64-unknown-linux-gnu, compiled by g++ (GCC) 7.3.0, 64-bit"},
+			want: semver.Version{
+				Major: 500,
+				Minor: 1,
+				Patch: 20,
+				Pre:   nil,
+				Build: nil,
+			},
+			wantErr: assert.NoError,
+		},
+		{
+			name: "og_2.0.0",
+			args: args{versionString: "PostgreSQL 9.2.4 (openGauss 2.0.0 build 78689da9) compiled at 2021-03-31 21:04:03 commit 0 last mr   on x86_64-unknown-linux-gnu, compiled by g++ (GCC) 7.3.0, 64-bit"},
+			want: semver.Version{
+				Major: 2,
+				Minor: 0,
+				Patch: 0,
+				Pre:   nil,
+				Build: nil,
+			},
+			wantErr: assert.NoError,
+		},
 		{
 			name: "(openGauss 1.0.0 build",
 			args: args{versionString: "(openGauss 1.0.0 build"},
@@ -219,24 +244,22 @@ func Test_parseVersionSem(t *testing.T) {
 				Pre:   nil,
 				Build: nil,
 			},
+			wantErr: assert.NoError,
 		},
 		{
 			name:    "aaaaa",
 			args:    args{versionString: "aaaa"},
 			want:    semver.Version{},
-			wantErr: true,
+			wantErr: assert.Error,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := parseVersionSem(tt.args.versionString)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("parseVersionSem() error = %v, wantErr %v", err, tt.wantErr)
+			if !tt.wantErr(t, err, fmt.Sprintf("parseVersionSem(%v)", tt.args.versionString)) {
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("parseVersionSem() got = %v, want %v", got, tt.want)
-			}
+			assert.Equalf(t, tt.want, got, "parseVersionSem(%v)", tt.args.versionString)
 		})
 	}
 }
@@ -288,7 +311,7 @@ func Test_parseVersion(t *testing.T) {
 		{
 			name: "GaussDB Kernel V500R001C20",
 			args: args{versionString: "PostgreSQL 9.2.4 (GaussDB Kernel V500R001C20 build 9eff8f60) compiled at 2021-09-24 10:10:25 commit 0 last mr   on x86_64-unknown-linux-gnu, compiled by g++ (GCC) 7.3.0, 64-bit"},
-			want: "500.001.20",
+			want: "500.1.20",
 		},
 	}
 	for _, tt := range tests {
