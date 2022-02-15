@@ -10,6 +10,7 @@ import (
 	"github.com/prometheus/common/log"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -42,7 +43,7 @@ func parseConstLabels(s string) prometheus.Labels {
 	if len(s) == 0 {
 		return nil
 	}
-
+	
 	parts := strings.Split(s, ",")
 	for _, p := range parts {
 		keyValue := strings.Split(strings.TrimSpace(p), "=")
@@ -60,7 +61,7 @@ func parseConstLabels(s string) prometheus.Labels {
 	if len(labels) == 0 {
 		return nil
 	}
-
+	
 	return labels
 }
 
@@ -70,14 +71,14 @@ func parseCSV(s string) (tags []string) {
 	if len(s) == 0 {
 		return nil
 	}
-
+	
 	parts := strings.Split(s, ",")
 	for _, p := range parts {
 		if tag := strings.TrimSpace(p); len(tag) > 0 {
 			tags = append(tags, tag)
 		}
 	}
-
+	
 	if len(tags) == 0 {
 		return nil
 	}
@@ -101,8 +102,14 @@ func parseVersion(versionString string) string {
 		return ""
 	}
 	if subMatches[1] == "GaussDB Kernel" {
-		r := regexp.MustCompile(`V(\d+)R(\d+)C(\d+)`).ReplaceAllString(subMatches[2], "${1}.${2}.${3}")
-		return r
+		r := regexp.MustCompile(`V(\d+)R(\d+)C(\d+)`).FindStringSubmatch(subMatches[2])
+		if len(r) < 3 {
+			return ""
+		}
+		r1, _ := strconv.Atoi(r[1])
+		r2, _ := strconv.Atoi(r[2])
+		r3, _ := strconv.Atoi(r[3])
+		return fmt.Sprintf("%v.%v.%v", r1, r2, r3)
 	}
 	return subMatches[2]
 }
