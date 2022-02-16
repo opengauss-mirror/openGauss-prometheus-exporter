@@ -29,6 +29,31 @@ export DATA_SOURCE_NAME="postgresql://login:password@hostname:port/dbname"
 
 To build the docker, run `make docker`.
 
+### Local Connect (Socket)
+
+The running user must match the database operations user
+
+Query the socket file
+
+```sql
+postgres=# show unix_socket_directory;
+unix_socket_directory
+-----------------------
+/tmp
+(1 row)
+```
+
+Set Env
+```bash
+export PGHOST=/tmp
+export PGPORT=26000
+export PGUSER=omm
+export PGDBNAME=postgres
+or
+export DATA_SOURCE_NAME="host=/tmp port=26000 user=omm dbname=postgres"
+```
+
+
 ### Flags
 
 * `help`
