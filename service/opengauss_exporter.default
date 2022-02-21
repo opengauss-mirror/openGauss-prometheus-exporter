@@ -1,5 +1,5 @@
-OG_EXPORTER_URL='postgres://127.0.0.1:26000/?sslmode=disable&host=/var/run/opengauss/data'
-OG_EXPORTER_CONFIG=/etc/og_exporter/og_exporter.yaml
+OG_EXPORTER_URL='postgres://127.0.0.1:26000/?sslmode=disable'
+OG_EXPORTER_CONFIG=/etc/opengauss_exporter/opengauss_exporter.yaml
 OG_EXPORTER_CONSTANT_LABELS=""
 OG_EXPORTER_DISABLE_CACHE=false
 OG_EXPORTER_DISABLE_SETTINGS_METRICS=false

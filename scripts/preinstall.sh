@@ -1,5 +1,5 @@
-getent group prometheus >/dev/null || groupadd -r prometheus
-getent passwd prometheus >/dev/null || \
-  useradd -r -g prometheus -d /home/prometheus -s /sbin/nologin \
-          -c "Prometheus services" prometheus
-exit 0
+#getent group omm >/dev/null || groupadd -r omm
+#getent passwd omm >/dev/null || \
+#useradd -r -g omm -d /home/omm  \
+#    -c "Prometheus opengauss_exporter services" omm
+#exit 0
