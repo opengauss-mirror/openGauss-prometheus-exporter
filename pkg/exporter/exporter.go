@@ -4,6 +4,7 @@ package exporter
 
 import (
 	"fmt"
+	pq "gitee.com/opengauss/openGauss-connector-go-pq"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 	"strings"
@@ -224,7 +225,7 @@ func (e *Exporter) discoverDatabaseDSNs(ch chan<- prometheus.Metric) []string {
 		if dsn == "" {
 			continue
 		}
-		parsedDSN, err := parseDsn(dsn)
+		parsedDSN, err := pq.ParseURLToMap(dsn)
 		if err != nil {
 			log.Errorf("Unable to parse DSN (%s): %v", ShadowDSN(dsn), err)
 			continue
@@ -246,7 +247,7 @@ func (e *Exporter) discoverDatabaseDSNs(ch chan<- prometheus.Metric) []string {
 			if Contains(e.excludedDatabases, databaseName) {
 				continue
 			}
-			parsedDSN["database"] = databaseName
+			parsedDSN[DSNDatabase] = databaseName
 			result = append(result, genDSNString(parsedDSN))
 		}
 	}

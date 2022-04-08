@@ -8,24 +8,10 @@ import (
 	"github.com/blang/semver"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
-	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 )
-
-// ShadowDSN will hide password part of dsn
-func ShadowDSN(dsn string) string {
-	pDSN, err := url.Parse(dsn)
-	if err != nil {
-		return ""
-	}
-	// Blank user info if not nil
-	if pDSN.User != nil {
-		pDSN.User = url.UserPassword(pDSN.User.Username(), "******")
-	}
-	return pDSN.String()
-}
 
 func Contains(a []string, x string) bool {
 	for _, n := range a {
@@ -43,7 +29,7 @@ func parseConstLabels(s string) prometheus.Labels {
 	if len(s) == 0 {
 		return nil
 	}
-	
+
 	parts := strings.Split(s, ",")
 	for _, p := range parts {
 		keyValue := strings.Split(strings.TrimSpace(p), "=")
@@ -61,7 +47,7 @@ func parseConstLabels(s string) prometheus.Labels {
 	if len(labels) == 0 {
 		return nil
 	}
-	
+
 	return labels
 }
 
@@ -71,14 +57,14 @@ func parseCSV(s string) (tags []string) {
 	if len(s) == 0 {
 		return nil
 	}
-	
+
 	parts := strings.Split(s, ",")
 	for _, p := range parts {
 		if tag := strings.TrimSpace(p); len(tag) > 0 {
 			tags = append(tags, tag)
 		}
 	}
-	
+
 	if len(tags) == 0 {
 		return nil
 	}
@@ -96,12 +82,12 @@ func parseVersionSem(versionString string) (semver.Version, error) {
 func parseVersion(versionString string) string {
 	versionString = strings.TrimSpace(versionString)
 	// var versionRegex = regexp.MustCompile(`^(\(\w+|\w+)\s+((\d+)(\.\d+)?(\.\d+)?)`)
-	var versionRegex = regexp.MustCompile(`(?i)(openGauss|MogDB|GaussDB Kernel)\s+((\d+)(\.\d+)?(\.\d+)|\w+)`)
+	var versionRegex = regexp.MustCompile(`(?i)(GaussDB\s+Kernel|MogDB\s+Kernel|openGauss|MogDB)\s+((\d+)(\.\d+)?(\.\d+)|\w+)`)
 	subMatches := versionRegex.FindStringSubmatch(versionString)
 	if len(subMatches) < 3 {
 		return ""
 	}
-	if subMatches[1] == "GaussDB Kernel" {
+	if subMatches[1] != "" && strings.HasSuffix(subMatches[1], "Kernel") {
 		r := regexp.MustCompile(`V(\d+)R(\d+)C(\d+)`).FindStringSubmatch(subMatches[2])
 		if len(r) < 3 {
 			return ""

@@ -211,6 +211,18 @@ func Test_parseVersionSem1(t *testing.T) {
 		wantErr assert.ErrorAssertionFunc
 	}{
 		{
+			name: "MogDB Kernel V500R001C20",
+			args: args{versionString: "PostgreSQL 9.2.4 (MogDB   Kernel V500R001C20 build 9eff8f60) compiled at 2021-09-24 10:10:25 commit 0 last mr   on x86_64-unknown-linux-gnu, compiled by g++ (GCC) 7.3.0, 64-bit"},
+			want: semver.Version{
+				Major: 500,
+				Minor: 1,
+				Patch: 20,
+				Pre:   nil,
+				Build: nil,
+			},
+			wantErr: assert.NoError,
+		},
+		{
 			name: "GaussDB Kernel V500R001C20",
 			args: args{versionString: "PostgreSQL 9.2.4 (GaussDB Kernel V500R001C20 build 9eff8f60) compiled at 2021-09-24 10:10:25 commit 0 last mr   on x86_64-unknown-linux-gnu, compiled by g++ (GCC) 7.3.0, 64-bit"},
 			want: semver.Version{

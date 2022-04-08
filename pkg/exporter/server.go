@@ -6,14 +6,12 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"gitee.com/opengauss/openGauss-connector-go-pq"
 	"github.com/blang/semver"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 	"github.com/sirupsen/logrus"
 	"math"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 )
@@ -498,50 +496,4 @@ func dbToString(t interface{}, time2string bool) (string, bool) {
 	default:
 		return "", false
 	}
-}
-
-func parseFingerprint(url string) (string, error) {
-	dsn, err := pq.ParseURL(url)
-	if err != nil {
-		dsn = url
-	}
-
-	pairs := strings.Split(dsn, " ")
-	kv := make(map[string]string, len(pairs))
-	for _, pair := range pairs {
-		split := strings.SplitN(pair, "=", 2)
-		if len(split) != 2 {
-			return "", fmt.Errorf("malformed dsn %q", dsn)
-		}
-		kv[split[0]] = split[1]
-	}
-
-	var (
-		fingerprint         string
-		fingerprintHostName string
-		fingerprintPort     string
-	)
-
-	if host, ok := kv["host"]; ok {
-		fingerprintHostName = host
-	} else {
-		fingerprintHostName = "localhost"
-	}
-	fingerprintHostName = TrimSingleQuotationMarks(fingerprintHostName)
-	if port, ok := kv["port"]; ok {
-		fingerprintPort = port
-	} else {
-		fingerprintPort = "5432"
-	}
-	fingerprintPort = TrimSingleQuotationMarks(fingerprintPort)
-	fingerprint = fmt.Sprintf("%s:%s", fingerprintHostName, fingerprintPort)
-	return fingerprint, nil
-}
-func TrimSingleQuotationMarks(s string) string {
-	return TrimPreAndSuffix(s, "'", "'")
-}
-func TrimPreAndSuffix(s, pre, suf string) string {
-	s = strings.TrimPrefix(s, pre)
-	s = strings.TrimSuffix(s, suf)
-	return s
 }
