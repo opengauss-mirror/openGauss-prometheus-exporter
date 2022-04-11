@@ -11,36 +11,46 @@ import (
 	"time"
 )
 
+type metricError struct {
+	lock   sync.Mutex
+	Errors map[string]error
+	Count  int64
+}
+
+func (e *metricError) addError(metricName string, err error) {
+	e.lock.Lock()
+	defer e.lock.Unlock()
+	e.Errors[metricName] = err
+	e.Count++
+}
+
 // 查询监控指标. 先判断是否读取缓存. 禁用缓存或者缓存超时,则读取数据库
 func (s *Server) queryMetrics(ch chan<- prometheus.Metric) map[string]error {
-	metricErrors := make(map[string]error)
+	metricErrors := &metricError{
+		Errors: map[string]error{},
+		Count:  0,
+	}
 	wg := sync.WaitGroup{}
 	limit := newRateLimit(s.parallel)
 	for _, queryInstance := range s.queryInstanceMap {
 		metricName := queryInstance.Name
-		// if !s.primary && queryInstance.Primary {
-		// 	log.Infof("Collect Metric %s only run primary. instance is recovery auto skip", metricName)
-		// 	continue
-		// }
 		wg.Add(1)
-		queryInst := queryInstance
-
 		limit.getToken()
-		go func() {
+		go func(queryInst *QueryInstance) {
 			defer wg.Done()
 			defer limit.putToken()
 			err := s.queryMetric(ch, queryInst)
 			if err != nil {
-				metricErrors[metricName] = err
-				// 采集失败个数
-				s.ScrapeErrorCount++
+				// 存在并发写入问题. 改成结构体加锁
+				metricErrors.addError(metricName, err)
 			}
-		}()
+		}(queryInstance)
 
 	}
 	wg.Wait()
 
-	return metricErrors
+	s.ScrapeErrorCount = metricErrors.Count
+	return metricErrors.Errors
 }
 
 func (s *Server) queryMetric(ch chan<- prometheus.Metric, queryInstance *QueryInstance) error {
@@ -63,7 +73,7 @@ func (s *Server) queryMetric(ch chan<- prometheus.Metric, queryInstance *QueryIn
 		return nil
 	}
 
-	// 记录采集成功个数
+	// 记录采集总个数
 	s.ScrapeTotalCount++
 
 	// Determine whether to enable caching and cache expiration 判断是否启用缓存和缓存过期
