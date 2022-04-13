@@ -438,7 +438,111 @@ pg_database:
   timeout: 1
 
 
+pg_tables_size:
+  name: pg_tables_size
+  desc: OpenGauss tables size
+  query:
+    - name: pg_tables_size
+      sql: |-
+          SELECT CURRENT_CATALOG AS datname,nsp.nspname,rel.relname,
+             pg_total_relation_size(rel.oid)       AS bytes,
+             pg_relation_size(rel.oid)             AS relsize,
+             pg_indexes_size(rel.oid)              AS indexsize,
+             pg_total_relation_size(reltoastrelid) AS toastsize
+          FROM pg_namespace nsp JOIN pg_class rel ON nsp.oid = rel.relnamespace
+          WHERE nspname NOT IN ('pg_catalog', 'information_schema','snapshot') AND rel.relkind = 'r'
+          order by 4 desc limit 100; 
+      version: '>=0.0.0'
+      timeout: 10
+      ttl: 3600
+      dbRole: "primary"
+      status: enable
+    - name: pg_tables_size
+      sql: |-
+          SELECT CURRENT_CATALOG AS datname,nsp.nspname,rel.relname,
+             pg_total_relation_size(rel.oid)       AS bytes,
+             pg_relation_size(rel.oid)             AS relsize,
+             pg_indexes_size(rel.oid)              AS indexsize,
+             pg_total_relation_size(reltoastrelid) AS toastsize
+          FROM pg_namespace nsp JOIN pg_class rel ON nsp.oid = rel.relnamespace
+          WHERE nspname NOT IN ('pg_catalog', 'information_schema','snapshot') AND rel.relkind = 'r'
+          order by 4 desc limit 100;
+      version: '>=0.0.0'
+      timeout: 10
+      ttl: 3600
+      dbRole: "standby"
+      status: disable
+  metrics:
+    - name: datname
+      description: database name of this relation
+      usage: LABEL    
+    - name: nspname
+      description: schema name of this relation
+      usage: LABEL
+    - name: relname
+      description: relation name of this relation
+      usage: LABEL
+    - name: bytes
+      description: total size of this table (including toast, index, toast index)
+      usage: GAUGE
+    - name: relsize
+      description: size of this table itself (main, vm, fsm)
+      usage: GAUGE
+    - name: indexsize
+      description:  size of all related indexes
+      usage: GAUGE
+    - name: toastsize
+      description:  size of corresponding toast tables
+      usage: GAUGE
+  status: enable
+  ttl: 3600
+  timeout: 10
 
+pg_indexes_size:
+  name: pg_indexes_size
+  desc: OpenGauss database indexes size
+  query:
+    - name: pg_indexes_size
+      sql: |-
+        select CURRENT_CATALOG AS datname,schemaname schema_name,relname table_name,indexrelname index_name,pg_table_size(indexrelid) as index_size 
+        from pg_stat_user_indexes 
+        where schemaname not in('pg_catalog', 'information_schema','snapshot')
+        order by 4 desc limit 100;
+      version: '>=0.0.0'
+      timeout: 10
+      ttl: 3600
+      dbRole: "primary"
+      status: enable
+    - name: pg_indexes_size
+      sql: |-
+        select CURRENT_CATALOG AS datname,schemaname schema_name,relname table_name,indexrelname index_name,pg_table_size(indexrelid) as index_size  
+        from pg_stat_user_indexes 
+        where schemaname not in('pg_catalog', 'information_schema','snapshot')
+        order by 4 desc limit 100;
+      version: '>=0.0.0'
+      timeout: 10
+      ttl: 3600
+      dbRole: "standby"
+      status: disable
+  metrics:
+    - name: datname
+      description: database name of this index
+      usage: LABEL 
+    - name: schema_name
+      description: Schema name of index
+      usage: LABEL
+    - name: table_name
+      description: Table name of index
+      usage: LABEL
+    - name: index_name
+      description: Name of index
+      usage: LABEL
+    - name: index_size
+      description: Size of index
+      usage: GAUGE
+  status: enable
+  ttl: 3600
+  timeout: 10
 
 # ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ┃ pg_checkpoint
@@ -1168,6 +1272,92 @@ pg_lock:
   ttl: 60
   timeout: 1
 
+pg_lock_detail:
+  name: pg_lock_detail
+  desc: OpenGauss lock sqls
+  query:
+    - name: pg_lock_detail
+      sql: |-
+        with tl as (select usename,granted,locktag,query_start,query 
+                    from pg_locks l,pg_stat_activity a 
+                    where l.pid=a.pid and locktag in(select locktag from pg_locks where granted='f')) 
+        select ts.usename locker_user,ts.query_start locker_query_start,ts.granted locker_granted,ts.query locker_query,tt.query locked_query,tt.query_start locked_query_start,tt.granted locked_granted,tt.usename locked_user,extract(epoch from now() - tt.query_start) as locked_times
+        from (select * from tl where granted='t') as ts,(select * from tl where granted='f') tt 
+        where ts.locktag=tt.locktag order by 1;
+      version: '>=0.0.0'
+      timeout: 1
+      ttl: 60
+      status: enable
+      dbRole: ""
+  metrics:
+    - name: locker_user
+      description: locker user
+      usage: LABEL
+    - name: locked_user
+      description: locked user
+      usage: LABEL
+    - name: locker_granted
+      description: locker granted
+      usage: LABEL
+    - name: locked_granted
+      description: locked granted
+      usage: LABEL
+    - name: locker_query_start
+      description: locker query start
+      usage: LABEL
+    - name: locked_query_start
+      description: locked query start
+      usage: LABEL
+    - name: locked_times
+      description: Total wait times
+      usage: GAUGE
+    - name: locker_query
+      description: locker query
+      usage: LABEL
+    - name: locked_query
+      description: locked query
+      usage: LABEL
+  status: enable
+  ttl: 60
+  timeout: 1
+  public: true
+
+pg_locker:
+  name: pg_locker
+  desc: OpenGauss locker count
+  query:
+    - name: pg_locker
+      sql: |-
+        with tl as (select usename,granted,locktag,query_start,query 
+                    from pg_locks l,pg_stat_activity a 
+                    where l.pid=a.pid and locktag in(select locktag from pg_locks where granted='f')) 
+        select usename,query_start,granted,query,count(query) count 
+        from tl where granted='t' group by usename,query_start,granted,query order by 5 desc;
+      version: '>=0.0.0'
+      timeout: 1
+      ttl: 60
+      status: enable
+      dbRole: ""
+  metrics:
+    - name: usename
+      description: locker user name
+      usage: LABEL
+    - name: granted
+      description: locker granted
+      usage: LABEL
+    - name: query_start
+      description: locker query start
+      usage: LABEL
+    - name: count
+      description: locker user count
+      usage: GAUGE
+    - name: query
+      description: locker query
+      usage: LABEL
+  status: enable
+  ttl: 60
+  timeout: 1
+  public: true
 
 pg_sql_history:
   name: pg_sql_history
