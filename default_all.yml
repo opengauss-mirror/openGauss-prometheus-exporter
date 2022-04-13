@@ -2147,3 +2147,213 @@ gauss_slow_sql_ai:
       usage: LABEL
     - name: value
       usage: GAUGE
+
+
+pg_table:
+  name: pg_table
+  desc: opengauss table statistics, db level, normal version
+  query: 
+    - name: pg_table
+      sql: |-
+          SELECT CURRENT_CATALOG AS datname,psut.schemaname AS nspname,psut.relname,
+            seq_scan,seq_tup_read,idx_scan,idx_tup_fetch,(seq_scan + idx_scan) AS tbl_scan,(seq_tup_read + idx_tup_fetch) AS tup_read,
+            n_tup_ins,n_tup_upd,n_tup_del,(n_tup_ins + n_tup_upd + n_tup_del) AS n_tup_mod,
+            n_tup_hot_upd,n_live_tup,n_dead_tup,
+            nvl(last_vacuum::text,'1970-01-01') as last_vacuum,nvl(last_autovacuum::text,'1970-01-01') as last_autovacuum,nvl(last_analyze::text,'1970-01-01') as last_analyze,nvl(last_autoanalyze::text,'1970-01-01') as last_autoanalyze,vacuum_count,autovacuum_count,analyze_count,autoanalyze_count,
+            extract(epoch from now() -(case when nvl(last_vacuum,'1970-01-01')>nvl(last_autovacuum,'1970-01-01') then nvl(last_vacuum,'1970-01-01') else nvl(last_autovacuum,'1970-01-01') end))::int vacuum_delay,
+            extract(epoch from now() -(case when nvl(last_analyze,'1970-01-01')>nvl(last_autoanalyze,'1970-01-01') then nvl(last_analyze,'1970-01-01') else nvl(last_autoanalyze,'1970-01-01') end))::int analyze_delay,
+            heap_blks_read,heap_blks_hit,idx_blks_read,idx_blks_hit,
+            toast_blks_read,toast_blks_hit,tidx_blks_read,tidx_blks_hit
+          FROM pg_stat_user_tables psut,pg_statio_user_tables psio 
+          WHERE psio.relid = psut.relid and psio.schemaname not in ('pg_catalog', 'information_schema','snapshot') and (n_live_tup+n_dead_tup)>10000;
+      version: '>=0.0.0'
+      timeout: 10
+      ttl: 60
+      status: enable
+      dbRole: "primary"
+    - name: pg_table
+      sql: |-
+          SELECT CURRENT_CATALOG AS datname,psut.schemaname AS nspname,psut.relname,
+            seq_scan,seq_tup_read,idx_scan,idx_tup_fetch,(seq_scan + idx_scan) AS tbl_scan,(seq_tup_read + idx_tup_fetch) AS tup_read,
+            n_tup_ins,n_tup_upd,n_tup_del,(n_tup_ins + n_tup_upd + n_tup_del) AS n_tup_mod,
+            n_tup_hot_upd,n_live_tup,n_dead_tup,
+            nvl(last_vacuum::text,'1970-01-01') as last_vacuum,nvl(last_autovacuum::text,'1970-01-01') as last_autovacuum,nvl(last_analyze::text,'1970-01-01') as last_analyze,nvl(last_autoanalyze::text,'1970-01-01') as last_autoanalyze,vacuum_count,autovacuum_count,analyze_count,autoanalyze_count,
+            extract(epoch from now() -(case when nvl(last_vacuum,'1970-01-01')>nvl(last_autovacuum,'1970-01-01') then nvl(last_vacuum,'1970-01-01') else nvl(last_autovacuum,'1970-01-01') end))::int vacuum_delay,
+            extract(epoch from now() -(case when nvl(last_analyze,'1970-01-01')>nvl(last_autoanalyze,'1970-01-01') then nvl(last_analyze,'1970-01-01') else nvl(last_autoanalyze,'1970-01-01') end))::int analyze_delay,
+            heap_blks_read,heap_blks_hit,idx_blks_read,idx_blks_hit,
+            toast_blks_read,toast_blks_hit,tidx_blks_read,tidx_blks_hit
+          FROM pg_stat_user_tables psut,pg_statio_user_tables psio 
+          WHERE psio.relid = psut.relid and psio.schemaname not in ('pg_catalog', 'information_schema','snapshot') and (n_live_tup+n_dead_tup)>10000;
+      version: '>=0.0.0'
+      timeout: 10
+      ttl: 60
+      status: disable
+      dbRole: "standby"
+  metrics:
+    - name: datname
+      description: database name of this relation
+      usage: LABEL     
+    - name: nspname
+      description: schema name of this relation
+      usage: LABEL       
+    - name: relname
+      description: relation name of this relation
+      usage: LABEL
+    - name: seq_scan
+      description: sequential scans initiated on this table
+      usage: COUNTER
+    - name: seq_tup_read
+      description: live rows fetched by sequential scans
+      usage: COUNTER  
+    - name: idx_scan
+      description: index scans initiated on this table
+      usage: COUNTER
+    - name: idx_tup_fetch
+      description: rows fetched by index scans
+      usage: COUNTER
+    - name: tbl_scan
+      description: total table scan = index scan + seq scan
+      usage: COUNTER
+    - name: tup_read
+      description: total tuples read = index fetch + seq read
+      usage: COUNTER
+    - name: n_tup_ins
+      description: rows inserted
+      usage: COUNTER
+    - name: n_tup_upd
+      description: rows updated
+      usage: COUNTER
+    - name: n_tup_del
+      description: rows deleted
+      usage: COUNTER
+    - name: n_tup_mod
+      description: rows modified (insert + update + delete)
+      usage: COUNTER
+    - name: n_tup_hot_upd
+      description: rows updated in HOT mode
+      usage: COUNTER
+    - name: n_live_tup
+      description: estimated live rows
+      usage: GAUGE
+    - name: n_dead_tup
+      description: estimated dead rows
+      usage: GAUGE
+    - name: n_mod_since_analyze
+      description: rows changed since last analyze
+      usage: GAUGE
+    - name: last_vacuum
+      description: when table was manually vacuumed last time (FULL not count)
+      usage: LABEL
+    - name: last_autovacuum
+      description: when table was automatically vacuumed last time
+      usage: LABEL
+    - name: last_analyze
+      description: when table was manually analyzed last time
+      usage: LABEL
+    - name: last_autoanalyze
+      description: when table was automatically analyzed last time
+      usage: LABEL
+    - name: vacuum_delay
+      description: delay from last vacuum time
+      usage: GAUGE
+    - name: analyze_delay
+      description: delay from last  analyze time
+      usage: GAUGE
+    - name: vacuum_count
+      description: manual vacuum count (FULL not count)
+      usage: COUNTER
+    - name: autovacuum_count
+      description: automatic vacuum count
+      usage: COUNTER
+    - name: analyze_count
+      description: manual analyze count
+      usage: COUNTER
+    - name: autoanalyze_count
+      description: automatic analyze count
+      usage: COUNTER
+    - name: heap_blks_read
+      description: relation heap read
+      usage: COUNTER
+    - name: heap_blks_hit
+      description: relation heap hit
+      usage: COUNTER
+    - name: idx_blks_read
+      description: index read
+      usage: COUNTER
+    - name: idx_blks_hit
+      description: index hit
+      usage: COUNTER
+    - name: toast_blks_read
+      description: toast heap read
+      usage: COUNTER
+    - name: toast_blks_hit
+      description: toast heap hit
+      usage: COUNTER
+    - name: tidx_blks_read
+      description: toast index read
+      usage: COUNTER
+    - name: tidx_blks_hit
+      description: toast index hit
+      usage: COUNTER
+  status: enable
+  ttl: 60
+  timeout: 10
+
+pg_index:
+  name: pg_index
+  desc: opengauss index statistics, db level, normal version
+  query:
+    - name: pg_index
+      sql: |-
+          SELECT CURRENT_CATALOG AS datname,psui.schemaname AS schemaname,psui.relname AS relname,psui.indexrelname AS indexrelname,idx_scan,idx_tup_read,idx_tup_fetch,idx_blks_read,idx_blks_hit
+          FROM pg_stat_user_indexes psui,pg_statio_user_indexes psio
+          WHERE psio.indexrelid = psui.indexrelid and psui.schemaname not in ('pg_catalog', 'information_schema','snapshot')
+          order by idx_scan desc limit 100;
+      version: '>=0.0.0'
+      timeout: 10
+      ttl: 3600
+      dbRole: "primary"
+      status: enable
+    - name: pg_index
+      sql: |-
+          SELECT CURRENT_CATALOG AS datname,psui.schemaname AS schemaname,psui.relname AS relname,psui.indexrelname AS indexrelname,idx_scan,idx_tup_read,idx_tup_fetch,idx_blks_read,idx_blks_hit
+          FROM pg_stat_user_indexes psui,pg_statio_user_indexes psio
+          WHERE psio.indexrelid = psui.indexrelid and psui.schemaname not in ('pg_catalog', 'information_schema','snapshot')
+          order by idx_scan desc limit 100;
+      version: '>=0.0.0'
+      timeout: 10
+      ttl: 3600
+      dbRole: "standby"
+      status: disable
+  metrics:
+    - name: datname
+      description: database name of this relation
+      usage: LABEL
+    - name: schemaname
+      description: schema name of this relation
+      usage: LABEL
+    - name: relname
+      description: relation name of this relation
+      usage: LABEL
+    - name: indexrelname
+      description: index name of this relation
+      usage: LABEL
+    - name: idx_scan
+      description: index scans initiated on this index
+      usage: GAUGE
+    - name: idx_tup_read
+      description: index entries returned by scans on this index
+      usage: COUNTER
+    - name: idx_tup_fetch
+      description: live table rows fetched by simple index scans using this index
+      usage: COUNTER
+    - name: idx_blks_read
+      description: blocks been read from disk of this index
+      usage: COUNTER
+    - name: idx_blks_hit
+      description: blocks hit from cache of this index
+      usage: COUNTER
+  status: enable
+  ttl: 10
+  timeout: 1
+
