@@ -1168,6 +1168,92 @@ pg_lock:
   ttl: 60
   timeout: 1
 
+pg_lock_detail:
+  name: pg_lock_detail
+  desc: OpenGauss lock sqls
+  query:
+    - name: pg_lock_detail
+      sql: |-
+        with tl as (select usename,granted,locktag,query_start,query 
+                    from pg_locks l,pg_stat_activity a 
+                    where l.pid=a.pid and locktag in(select locktag from pg_locks where granted='f')) 
+        select ts.usename locker_user,ts.query_start locker_query_start,ts.granted locker_granted,ts.query locker_query,tt.query locked_query,tt.query_start locked_query_start,tt.granted locked_granted,tt.usename locked_user,extract(epoch from now() - tt.query_start) as locked_times
+        from (select * from tl where granted='t') as ts,(select * from tl where granted='f') tt 
+        where ts.locktag=tt.locktag order by 1;
+      version: '>=0.0.0'
+      timeout: 1
+      ttl: 60
+      status: enable
+      dbRole: ""
+  metrics:
+    - name: locker_user
+      description: locker user
+      usage: LABEL
+    - name: locked_user
+      description: locked user
+      usage: LABEL
+    - name: locker_granted
+      description: locker granted
+      usage: LABEL
+    - name: locked_granted
+      description: locked granted
+      usage: LABEL
+    - name: locker_query_start
+      description: locker query start
+      usage: LABEL
+    - name: locked_query_start
+      description: locked query start
+      usage: LABEL
+    - name: locked_times
+      description: Total wait times
+      usage: GAUGE
+    - name: locker_query
+      description: locker query
+      usage: LABEL
+    - name: locked_query
+      description: locked query
+      usage: LABEL
+  status: enable
+  ttl: 60
+  timeout: 1
+  public: true
+
+pg_locker:
+  name: pg_locker
+  desc: OpenGauss locker count
+  query:
+    - name: pg_locker
+      sql: |-
+        with tl as (select usename,granted,locktag,query_start,query 
+                    from pg_locks l,pg_stat_activity a 
+                    where l.pid=a.pid and locktag in(select locktag from pg_locks where granted='f')) 
+        select usename,query_start,granted,query,count(query) count 
+        from tl where granted='t' group by usename,query_start,granted,query order by 5 desc;
+      version: '>=0.0.0'
+      timeout: 1
+      ttl: 60
+      status: enable
+      dbRole: ""
+  metrics:
+    - name: usename
+      description: locker user name
+      usage: LABEL
+    - name: granted
+      description: locker granted
+      usage: LABEL
+    - name: query_start
+      description: locker query start
+      usage: LABEL
+    - name: count
+      description: locker user count
+      usage: GAUGE
+    - name: query
+      description: locker query
+      usage: LABEL
+  status: enable
+  ttl: 60
+  timeout: 1
+  public: true
 
 pg_sql_history:
   name: pg_sql_history
