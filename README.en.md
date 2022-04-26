@@ -20,7 +20,7 @@ docker run --net=host -e DATA_SOURCE_NAME="postgresql://postgres:password@localh
 The default make file behavior is to build the binary:
 
 ```bash
-go clone https://gitee.com/opengauss/openGauss-prometheus-exporter.git
+git clone https://gitee.com/opengauss/openGauss-prometheus-exporter.git
 cd openGauss-prometheus-exporter
 make build
 export DATA_SOURCE_NAME="postgresql://login:password@hostname:port/dbname"
