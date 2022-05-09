@@ -285,16 +285,6 @@ func Test_parseVersion(t *testing.T) {
 		args args
 		want string
 	}{
-		// {
-		// 	name: "EnterpriseDB 9.6.5.10",
-		// 	args: args{versionString: "EnterpriseDB 9.6.5.10 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 4.4.7 20120313 (Red Hat 4.4.7-16), 64-bit"},
-		// 	want: "9.6.5",
-		// },
-		// {
-		// 	name: "postgres 9.5.4",
-		// 	args: args{versionString: "postgres 9.5.4, compiled by Visual C++ build 1800, 64-bit"},
-		// 	want: "9.5.4",
-		// },
 		{
 			name: "1.0.0",
 			args: args{versionString: "(openGauss 1.0.0 build 5ed8dc17) compiled at 2020-09-15 18:04:09 commit 0 last mr   on x86_64-unknown-linux-gnu, compiled by g++ (GCC) 8.2.0, 64-"},
@@ -324,6 +314,11 @@ func Test_parseVersion(t *testing.T) {
 			name: "GaussDB Kernel V500R001C20",
 			args: args{versionString: "PostgreSQL 9.2.4 (GaussDB Kernel V500R001C20 build 9eff8f60) compiled at 2021-09-24 10:10:25 commit 0 last mr   on x86_64-unknown-linux-gnu, compiled by g++ (GCC) 7.3.0, 64-bit"},
 			want: "500.1.20",
+		},
+		{
+			name: "Vastbase",
+			args: args{versionString: "PostgreSQL 9.2.4 (Vastbase G100 V2.2 (Build 5.83.5339)) compiled at 2022-02-18 06:19:51 commit 0 last mr   on x86_64-unknown-linux-gnu, compiled by g++ (GCC) 7.3.0, 64-bit"},
+			want: "2.2",
 		},
 	}
 	for _, tt := range tests {
