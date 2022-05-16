@@ -79,23 +79,51 @@ func parseVersionSem(versionString string) (semver.Version, error) {
 	return semver.Version{},
 		errors.New(fmt.Sprintln("Could not find a openGauss version in string:", versionString))
 }
+
+var (
+	gaussDBVerRep   = regexp.MustCompile(`(GaussDB|MogDB)\s+Kernel\s+V(\w+)`)
+	openGaussVerRep = regexp.MustCompile(`(openGauss|MogDB)\s+(\d+\.\d+.\d+)`)
+	vastbaseVerRep  = regexp.MustCompile(`(Vastbase\s+G100)\s+V(\d+\.\d+)`)
+)
+
 func parseVersion(versionString string) string {
 	versionString = strings.TrimSpace(versionString)
-	// var versionRegex = regexp.MustCompile(`^(\(\w+|\w+)\s+((\d+)(\.\d+)?(\.\d+)?)`)
-	var versionRegex = regexp.MustCompile(`(?i)(GaussDB\s+Kernel|MogDB\s+Kernel|openGauss|MogDB)\s+((\d+)(\.\d+)?(\.\d+)|\w+)`)
-	subMatches := versionRegex.FindStringSubmatch(versionString)
-	if len(subMatches) < 3 {
+	if gaussDBVerRep.MatchString(versionString) {
+		return parseGaussDBVersion(gaussDBVerRep.FindStringSubmatch(versionString))
+	}
+	if openGaussVerRep.MatchString(versionString) {
+		return parseOpenGaussVersion(openGaussVerRep.FindStringSubmatch(versionString))
+	}
+	if vastbaseVerRep.MatchString(versionString) {
+		return parseVastbaseVersion(vastbaseVerRep.FindStringSubmatch(versionString))
+	}
+	return ""
+}
+
+func parseOpenGaussVersion(subMatches []string) string {
+	if len(subMatches) < 3 || subMatches[2] == "" {
 		return ""
 	}
-	if subMatches[1] != "" && strings.HasSuffix(subMatches[1], "Kernel") {
-		r := regexp.MustCompile(`V(\d+)R(\d+)C(\d+)`).FindStringSubmatch(subMatches[2])
-		if len(r) < 3 {
-			return ""
-		}
-		r1, _ := strconv.Atoi(r[1])
-		r2, _ := strconv.Atoi(r[2])
-		r3, _ := strconv.Atoi(r[3])
-		return fmt.Sprintf("%v.%v.%v", r1, r2, r3)
+	return subMatches[2]
+}
+
+func parseVastbaseVersion(subMatches []string) string {
+	if len(subMatches) < 3 || subMatches[2] == "" {
+		return ""
 	}
 	return subMatches[2]
+}
+
+func parseGaussDBVersion(subMatches []string) string {
+	if len(subMatches) < 3 || subMatches[2] == "" {
+		return ""
+	}
+	r := regexp.MustCompile(`(\d+)R(\d+)C(\d+)`).FindStringSubmatch(subMatches[2])
+	if len(r) < 3 {
+		return ""
+	}
+	r1, _ := strconv.Atoi(r[1])
+	r2, _ := strconv.Atoi(r[2])
+	r3, _ := strconv.Atoi(r[3])
+	return fmt.Sprintf("%v.%v.%v", r1, r2, r3)
 }
